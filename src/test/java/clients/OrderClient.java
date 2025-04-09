@@ -1,33 +1,36 @@
 package clients;
 
 import io.qameta.allure.Step;
-import io.restassured.RestAssured;
 import io.restassured.response.Response;
 import models.order.Order;
+import static clients.BaseClient.spec;
 
-import static io.restassured.RestAssured.given;
+import java.util.HashMap;
+import java.util.Map;
 
 public class OrderClient {
-    private final String BASE_URL = "https://qa-scooter.praktikum-services.ru";
-
-    public OrderClient() {
-        RestAssured.baseURI = BASE_URL;
-    }
 
     @Step("Создание заказа с данными: firstName = {order.getFirstName()}, lastName = {order.getLastName()}, color = {order.getColor()}")
     public Response createOrder(Order order) {
-        return given()
-                .header("Content-type", "application/json")
-                .body(order)
+        return spec.body(order)
                 .when()
                 .post("/api/v1/orders");
     }
 
     @Step("Получение списка заказов")
     public Response getOrders() {
-        return given()
-                .header("Content-type", "application/json")
+        return spec
                 .when()
                 .get("/api/v1/orders");
+    }
+
+    @Step("Отмена заказа с track: {track}")
+    public Response cancelOrder(int track) {
+        Map<String, Integer> requestBody = new HashMap<>();
+        requestBody.put("track", track);
+
+        return spec.body(requestBody)
+                .when()
+                .put("/api/v1/orders/cancel");
     }
 }

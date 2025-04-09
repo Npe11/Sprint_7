@@ -28,14 +28,24 @@ public class CourierLoginTest {
     }
 
     @After
-    @Step("Очистка тестовых данных: обнуление объектов, созданных в setUp")
+    @Step("Очистка тестовых данных: удаление созданного курьера и обнуление объектов")
     public void tearDown() {
+        if (testCourier != null) {
+            // Выполняем логин с корректными данными, чтобы получить ID созданного курьера
+            Response loginResponse = courierClient.loginCourier(new CourierCredentials(testCourier.getLogin(), testCourier.getPassword()));
+            if (loginResponse.getStatusCode() == 200) {
+                int courierId = loginResponse.jsonPath().getInt("id");
+                if (courierId != 0) {
+                    courierClient.deleteCourier(courierId);
+                }
+            }
+        }
         courierClient = null;
         testCourier = null;
     }
 
     @Test
-    @Description("Проверка успешного логина курьера: возвращается статус 200 и id")
+    @Description("Проверка успешного логина курьера: возвращается статус 200 и поле id")
     public void testSuccessfulCourierLogin() {
         CourierCredentials credentials = new CourierCredentials(testCourier.getLogin(), testCourier.getPassword());
         Response response = courierClient.loginCourier(credentials);
@@ -44,28 +54,39 @@ public class CourierLoginTest {
     }
 
     @Test
-    @Description("Проверка логина без обязательного поля: возвращается 400 и сообщение об ошибке")
+    @Description("Проверка логина без обязательного поля (логин): возвращается 400 и сообщение 'Недостаточно данных для входа'")
     public void testLoginWithoutLogin() {
-        CourierCredentials credentials = new CourierCredentials(null, testCourier.getPassword());
+        CourierCredentials credentials = new CourierCredentials("", testCourier.getPassword());
         Response response = courierClient.loginCourier(credentials);
         verifyStatusCode(response, 400);
         verifyResponseBody(response, "message", "Недостаточно данных для входа");
     }
 
     @Test
-    @Description("Проверка логина с некорректными данными: возвращается 404 и сообщение 'Учетная запись не найдена'")
-    public void testLoginWithIncorrectCredentials() {
-        // Попытка логина с неверным паролем
-        CourierCredentials wrongPasswordCredentials = new CourierCredentials(testCourier.getLogin(), "wrongPassword");
-        Response responseWrongPassword = courierClient.loginCourier(wrongPasswordCredentials);
-        verifyStatusCode(responseWrongPassword, 404);
-        verifyResponseBody(responseWrongPassword, "message", "Учетная запись не найдена");
+    @Description("Проверка логина без обязательного поля (пароль): возвращается 400 и сообщение 'Недостаточно данных для входа'")
+    public void testLoginWithoutPassword() {
+        CourierCredentials credentials = new CourierCredentials(testCourier.getLogin(), "");
+        Response response = courierClient.loginCourier(credentials);
+        verifyStatusCode(response, 400);
+        verifyResponseBody(response, "message", "Недостаточно данных для входа");
+    }
 
-        // Попытка логина с неверным логином
-        CourierCredentials wrongLoginCredentials = new CourierCredentials("nonexistentLogin", testCourier.getPassword());
-        Response responseWrongLogin = courierClient.loginCourier(wrongLoginCredentials);
-        verifyStatusCode(responseWrongLogin, 404);
-        verifyResponseBody(responseWrongLogin, "message", "Учетная запись не найдена");
+    @Test
+    @Description("Проверка логина с некорректными данными - неверный пароль: возвращается 404 и сообщение 'Учетная запись не найдена'")
+    public void testLoginWithIncorrectPassword() {
+        CourierCredentials credentials = new CourierCredentials(testCourier.getLogin(), "wrongPassword");
+        Response response = courierClient.loginCourier(credentials);
+        verifyStatusCode(response, 404);
+        verifyResponseBody(response, "message", "Учетная запись не найдена");
+    }
+
+    @Test
+    @Description("Проверка логина с некорректными данными - неверный логин: возвращается 404 и сообщение 'Учетная запись не найдена'")
+    public void testLoginWithIncorrectLogin() {
+        CourierCredentials credentials = new CourierCredentials("nonexistentLogin", testCourier.getPassword());
+        Response response = courierClient.loginCourier(credentials);
+        verifyStatusCode(response, 404);
+        verifyResponseBody(response, "message", "Учетная запись не найдена");
     }
 
     @Step("Проверка, что код ответа равен {1}")

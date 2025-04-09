@@ -19,6 +19,7 @@ public class OrderCreationTest {
 
     private OrderClient orderClient;
     private Order testOrder;
+    private int orderTrack = 0;
 
     // Параметры для тестирования цвета
     private String testCaseDescription;
@@ -58,10 +59,15 @@ public class OrderCreationTest {
     }
 
     @After
-    @Step("Очистка тестовых данных: обнуление объектов")
+    @Step("Очистка тестовых данных: отмена созданного заказа и обнуление объектов")
     public void tearDown() {
+        if (orderTrack != 0) {
+            orderClient.cancelOrder(orderTrack);
+        }
+
         orderClient = null;
         testOrder = null;
+        orderTrack = 0;
     }
 
     @Test
@@ -70,6 +76,8 @@ public class OrderCreationTest {
         Response response = orderClient.createOrder(testOrder);
         verifyStatusCode(response, 201);
         verifyFieldExists(response, "track");
+
+        orderTrack = response.jsonPath().getInt("track");
     }
 
     @Step("Проверка, что код ответа равен {1}")
