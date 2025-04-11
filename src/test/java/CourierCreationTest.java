@@ -14,7 +14,6 @@ public class CourierCreationTest {
 
     private CourierClient courierClient;
     private Courier testCourier;
-    private int courierId = 0;
 
     @Before
     @Step("Подготовка тестовых данных: создание уникального курьера")
@@ -28,13 +27,18 @@ public class CourierCreationTest {
     @After
     @Step("Очистка тестовых данных: удаление созданного курьера и обнуление объектов")
     public void tearDown() {
-        if (courierId != 0) {
-            courierClient.deleteCourier(courierId);
+        if (testCourier != null) {
+            // Выполняем логин с корректными данными, чтобы получить ID созданного курьера
+            Response loginResponse = courierClient.loginCourier(new CourierCredentials(testCourier.getLogin(), testCourier.getPassword()));
+            if (loginResponse.getStatusCode() == 200) {
+                int courierId = loginResponse.jsonPath().getInt("id");
+                if (courierId != 0) {
+                    courierClient.deleteCourier(courierId);
+                }
+            }
         }
-
         courierClient = null;
         testCourier = null;
-        courierId = 0;
     }
 
     @Test
@@ -43,11 +47,6 @@ public class CourierCreationTest {
         Response createResponse = courierClient.createCourier(testCourier);
         verifyStatusCode(createResponse, 201);
         verifyResponseBody(createResponse, "ok", true);
-
-        // Получаем id созданного курьера через логин для последующего удаления
-        Response loginResponse = courierClient.loginCourier(new CourierCredentials(testCourier.getLogin(), testCourier.getPassword()));
-        verifyStatusCode(loginResponse, 200);
-        courierId = loginResponse.jsonPath().getInt("id");
     }
 
     @Test
@@ -75,10 +74,6 @@ public class CourierCreationTest {
         Response response1 = courierClient.createCourier(testCourier);
         verifyStatusCode(response1, 201);
         verifyResponseBody(response1, "ok", true);
-        // Получаем id созданного курьера для удаления
-        Response loginResponse = courierClient.loginCourier(new CourierCredentials(testCourier.getLogin(), testCourier.getPassword()));
-        verifyStatusCode(loginResponse, 200);
-        courierId = loginResponse.jsonPath().getInt("id");
 
         // Второй запрос: пытаемся создать курьера с тем же логином
         Response response2 = courierClient.createCourier(testCourier);
